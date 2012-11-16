@@ -179,7 +179,9 @@ INTERCEPT(int, XChangeProperty,
 	const unsigned char * data,
 	int                   n
 ) {
+	
 	if(property == XA_WM_NAME && format == 8) {
+		
 		if(fix_net_wm_name) {
 			// Use the XA_WM_NAME as both XA_WM_NAME and _NET_WM_NAME.
 			// Steam sets _NET_WM_NAME to just "Steam" for all windows.
@@ -201,6 +203,7 @@ INTERCEPT(int, XChangeProperty,
 				free(buffer);
 			}
 		}
+		
 		if(set_window_type && !is_unmanaged_window(dpy, w)
 		   && w != first_window && w != second_window) {
 			// Set the window type for non-menu windows.
@@ -216,11 +219,14 @@ INTERCEPT(int, XChangeProperty,
 			}
 			set_window_is_dialog(dpy, w, is_dialog);
 		}
+		
 	}
+	
 	if(force_borders && property == XInternAtom(dpy, "_MOTIF_WM_HINTS", False)) {
 		// Don't suppress window borders!
 		return 1;
 	}
+	
 	return BASE(XChangeProperty)(dpy, w, property, type, format, mode, data, n);
 }
 
@@ -235,10 +241,12 @@ INTERCEPT(int, XMoveResizeWindow,
 	unsigned int width,
 	unsigned int height
 ) {
+	
 	if(prevent_move && !is_unmanaged_window(dpy, w)) {
 		// Ignore the position request for non-menu windows.
 		return XResizeWindow(dpy, w, width, height);
 	}
+	
 	return BASE(XMoveResizeWindow)(dpy, w, x, y, width, height);
 }
 
@@ -248,10 +256,12 @@ INTERCEPT(int, XMoveWindow,
 	int          x,
 	int          y
 ) {
+	
 	if(prevent_move && !is_unmanaged_window(dpy, w)) {
 		// Ignore the position request for non-menu windows.
 		return 1;
 	}
+	
 	return BASE(XMoveWindow)(dpy, w, x, y);
 }
 
@@ -262,15 +272,18 @@ INTERCEPT(int, XMapWindow,
 	Display * dpy,
 	Window    w
 ) {
+	
 	if(first_window == None) {
 		first_window = w;
 	}
+	
 	if(group_windows) {
 		// Group all steam windows.
 		Atom leader = XInternAtom(dpy, "WM_CLIENT_LEADER", False);
 		set_window_property(dpy, w, leader, XA_WINDOW, first_window);
 		set_window_group_hint(dpy, w, first_window);
 	}
+	
 	if(set_window_type && (w == first_window || second_window == None)) {
 		// Force the first and second windows to be marked as dialogs.
 		set_window_is_dialog(dpy, w, true);
@@ -280,6 +293,7 @@ INTERCEPT(int, XMapWindow,
 			XResizeWindow(dpy, w, 384, 107);
 		}
 	}
+	
 	return BASE(XMapWindow)(dpy, w);
 }
 
