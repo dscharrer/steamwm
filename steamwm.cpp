@@ -25,6 +25,10 @@
 #//                                "Steam" or "Friends" as a dialog window.
 #//                                The startup window is also marked as a dialog.
 #//
+#// STEAMWM_SET_FIXED_SIZE   Set fixed size hints for windows with a fixed layout.
+#//
+#// STEAMWM_MANAGE_ERRORS    Steam sets error dialogs as unmanaged windows - fix that.
+#//
 #//
 #// Requires: g++ with support for x86 targets, Xlib + headers
 #//
@@ -61,6 +65,8 @@
 [ -z $STEAMWM_FIX_NET_WM_NAME ] && export STEAMWM_FIX_NET_WM_NAME=1
 [ -z $STEAMWM_GROUP_WINDOWS   ] && export STEAMWM_GROUP_WINDOWS=1
 [ -z $STEAMWM_SET_WINDOW_TYPE ] && export STEAMWM_SET_WINDOW_TYPE=1
+[ -z $STEAMWM_SET_FIXED_SIZE  ] && export STEAMWM_SET_FIXED_SIZE=1
+[ -z $STEAMWM_MANAGE_ERRORS   ] && export STEAMWM_MANAGE_ERRORS=1
 
 
 self="$(readlink -f "$(which "$0")")"
@@ -105,6 +111,15 @@ static const char * main_windows[] = {
 	"Steam",
 	"Friends",
 };
+static const char * fixed_size_windows[] = {
+	"Settings",
+	"About Steam",
+	"Backup and Restore Programs",
+};
+static const char * fixed_size_suffixes[] = {
+	" - Properties",
+	" - Category",
+};
 
 
 static bool force_borders = false;
@@ -112,6 +127,8 @@ static bool prevent_move = false;
 static bool fix_net_wm_name = false;
 static bool group_windows = false;
 static bool set_window_type = false;
+static bool set_fixed_size = false;
+static bool manage_errors = false;
 
 extern "C" {
 extern char * program_invocation_short_name; // provided by glibc
@@ -135,13 +152,17 @@ void steamwm_init(void) {
 	fix_net_wm_name = get_setting("STEAMWM_FIX_NET_WM_NAME");
 	group_windows   = get_setting("STEAMWM_GROUP_WINDOWS");
 	set_window_type = get_setting("STEAMWM_SET_WINDOW_TYPE");
+	set_fixed_size  = get_setting("STEAMWM_SET_FIXED_SIZE");
+	manage_errors   = get_setting("STEAMWM_MANAGE_ERRORS");
 	
 	
 	fprintf(stderr, "\n[steamwm] attached to steam:\n force_borders     %d\n"
 	                " prevent_move      %d\n fix_net_wm_name   %d\n"
-	                " group_windows     %d\n set_window_type   %d\n\n",
+	                " group_windows     %d\n set_window_type   %d\n"
+	                " set_fixed_size    %d\n manage_errors     %d\n\n",
 	                int(force_borders), int(prevent_move), int(fix_net_wm_name),
-	                int(group_windows), int(set_window_type));
+	                int(group_windows), int(set_window_type), int(set_fixed_size),
+	                int(manage_errors));
 	
 }
 
@@ -159,10 +180,16 @@ void steamwm_init(void) {
 #define BASE(name) ((TYPE_NAME(name))BASE_NAME(name))
 
 static bool is_unmanaged_window(Display * dpy, Window w);
+static void set_is_unmanaged_window(Display * dpy, Window w, bool is_unmanaged);
+static bool is_fixed_size_window_name(const char * name);
+static bool is_main_window_name(const char * name);
+static void set_window_desired_size(Display * dpy, Window w, int width, int height,
+                                    bool set_fixed);
 static void set_window_property(Display * dpy, Window w, Atom property, Atom type,
                                 long value);
 static void set_window_group_hint(Display * dpy, Window w, XID window_group);
 static void set_window_is_dialog(Display * dpy, Window w, bool is_dialog);
+static void set_window_modal(Display * dpy, Window w);
 
 
 /* fix window titles and types, and add window borders & title bars */
@@ -181,6 +208,8 @@ INTERCEPT(int, XChangeProperty,
 ) {
 	
 	if(property == XA_WM_NAME && format == 8) {
+		
+		char * value = (char *)data;
 		
 		if(fix_net_wm_name) {
 			// Use the XA_WM_NAME as both XA_WM_NAME and _NET_WM_NAME.
@@ -204,22 +233,34 @@ INTERCEPT(int, XChangeProperty,
 			}
 		}
 		
+		if(manage_errors && is_unmanaged_window(dpy, w) && strcmp(value, "Steam") != 0) {
+			// Error dialogs should be managed by the window manager.
+			set_is_unmanaged_window(dpy, w, false);
+			set_window_modal(dpy, w);
+			set_window_desired_size(dpy, w, -1, -1, true);
+		}
+		
 		if(set_window_type && !is_unmanaged_window(dpy, w)
 		   && w != first_window && w != second_window) {
 			// Set the window type for non-menu windows.
 			// This should probably be done *before* mapping the windows,
 			// but the we don't have a title yet.
 			// Try to guess the window type from the title.
-			bool is_dialog = true;
-			for(unsigned i = 0; i < sizeof(main_windows)/sizeof(*main_windows); i++) {
-				if(strcmp((char *)data, main_windows[i]) == 0) {
-					is_dialog = false;
-					break;
-				}
-			}
-			set_window_is_dialog(dpy, w, is_dialog);
+			set_window_is_dialog(dpy, w, !is_main_window_name(value));
 		}
 		
+		if(set_fixed_size && is_fixed_size_window_name(value)) {
+			// Set fixed size hints for windows with static layouts.
+			set_window_desired_size(dpy, w, -1, -1, true);
+		}
+		
+	}
+	
+	if(manage_errors && property == XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False)) {
+		if(!is_unmanaged_window(dpy, w)) {
+			// Ignore the window type Steam sets on error dialogs.
+			return 1;
+		}
 	}
 	
 	if(force_borders && property == XInternAtom(dpy, "_MOTIF_WM_HINTS", False)) {
@@ -233,6 +274,21 @@ INTERCEPT(int, XChangeProperty,
 
 /* ignore window move requests for non-menu windows */
 
+INTERCEPT(int, XResizeWindow,
+	Display *    dpy,
+	Window       w,
+	unsigned int width,
+	unsigned int height
+) {
+	
+	if(set_fixed_size) {
+		// Set fixed size hints for windows with static layouts.
+		set_window_desired_size(dpy, w, width, height, false);
+	}
+	
+	return BASE(XResizeWindow)(dpy, w, width, height);
+}
+
 INTERCEPT(int, XMoveResizeWindow,
 	Display *    dpy,
 	Window       w,
@@ -242,9 +298,14 @@ INTERCEPT(int, XMoveResizeWindow,
 	unsigned int height
 ) {
 	
+	if(set_fixed_size) {
+		// Set fixed size hints for windows with static layouts.
+		set_window_desired_size(dpy, w, width, height, false);
+	}
+	
 	if(prevent_move && !is_unmanaged_window(dpy, w)) {
 		// Ignore the position request for non-menu windows.
-		return XResizeWindow(dpy, w, width, height);
+		return BASE(XResizeWindow)(dpy, w, width, height);
 	}
 	
 	return BASE(XMoveResizeWindow)(dpy, w, x, y, width, height);
@@ -308,6 +369,73 @@ static bool is_unmanaged_window(Display * dpy, Window w) {
 	return xwa.override_redirect;
 }
 
+static void set_is_unmanaged_window(Display * dpy, Window w, bool is_unmanaged) {
+	XSetWindowAttributes xswa;
+	xswa.override_redirect = is_unmanaged;
+	XChangeWindowAttributes(dpy, w, CWOverrideRedirect, &xswa);
+}
+
+static bool is_main_window_name(const char * name) {
+	
+	for(unsigned i = 0; i < sizeof(main_windows)/sizeof(*main_windows); i++) {
+		if(strcmp(name, main_windows[i]) == 0) {
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+static bool is_fixed_size_window_name(const char * name) {
+	
+	for(unsigned i = 0; i < sizeof(fixed_size_windows)/sizeof(*fixed_size_windows); i++) {
+		if(strcmp(name, fixed_size_windows[i]) == 0) {
+			return true;
+		}
+	}
+	
+	int len = strlen(name);
+	for(unsigned i = 0; i < sizeof(fixed_size_suffixes)/sizeof(*fixed_size_suffixes); i++) {
+		int plen = strlen(fixed_size_suffixes[i]);
+		if(len > plen && strcmp(name + len - plen, fixed_size_suffixes[i]) == 0) {
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+static void set_window_desired_size(Display * dpy, Window w, int width, int height,
+                                    bool set_fixed) {
+	XSizeHints xsh;
+	long supplied;
+	if(!XGetWMNormalHints(dpy, w, &xsh, &supplied)) {
+		xsh.flags = 0;
+	}
+	if(width > 0 && height > 0) {
+		// Store the desired size.
+		xsh.flags |= PBaseSize;
+		xsh.base_width = width, xsh.base_height = height;
+	} else if(xsh.flags & PBaseSize) {
+		// Retrieve the desired size.
+		width = xsh.base_width, height = xsh.base_height;
+	} else {
+		Window root;
+		int x, y;
+		unsigned int cwidth, cheight, border_width, depth;
+		if(!XGetGeometry(dpy, w, &root, &x, &y, &cwidth, &cheight, &border_width, &depth)) {
+			return;
+		}
+		width = cwidth, height = cheight;
+	}
+	if(set_fixed || (xsh.flags & (PMinSize | PMaxSize))) {
+		xsh.flags |= PMinSize | PMaxSize;
+		xsh.min_width = xsh.max_width = width;
+		xsh.min_height = xsh.max_height = height;
+	}
+	XSetWMNormalHints(dpy, w, &xsh);
+}
+
 static void set_window_property(Display * dpy, Window w, Atom property, Atom type,
                                 long value) {
 	unsigned char data[sizeof(long)];
@@ -338,5 +466,30 @@ static void set_window_is_dialog(Display * dpy, Window w, bool is_dialog) {
 	} else {
 		Atom normal = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_NORMAL", False);
 		set_window_property(dpy, w, window_type, XA_ATOM, normal);
+	}
+}
+
+static void set_window_modal(Display * dpy, Window w) {
+	XWindowAttributes xwa;
+	if(!XGetWindowAttributes(dpy, w, &xwa)) {
+		return;
+	}
+	Atom state = XInternAtom(dpy, "_NET_WM_STATE", False);
+	Atom state_modal = XInternAtom(dpy, "_NET_WM_STATE_MODAL", False);
+	if(xwa.map_state == IsUnmapped) {
+		set_window_property(dpy, w, state, XA_ATOM, state_modal);
+	} else {
+		XEvent event;
+		event.type = ClientMessage;
+		event.xclient.message_type = state;
+		event.xclient.window = w;
+		event.xclient.format = 32;
+		event.xclient.data.l[0] = 1; // add
+		event.xclient.data.l[1] = state_modal;
+		event.xclient.data.l[2] = 0;
+		event.xclient.data.l[3] = 1;
+		event.xclient.data.l[4] = 0;
+		XSendEvent(dpy, DefaultRootWindow(dpy), False,
+		           (SubstructureNotifyMask | SubstructureRedirectMask), &event);
 	}
 }
