@@ -10,6 +10,10 @@
 #//
 #// STEAMWM_FIX_NET_WM_NAME  Set _NET_WM_NAME to the WM_NAME value to get better window
 #//                          titles (and add " - Steam" suffix if needed).
+#//                          Update: now disabled by default
+#//                          Steam now doesn't set WM_ICON_NAME, _NET_WM_NAME or
+#//                          _NET_WM_ICON_NAME anymore - while it would be better to set
+#//                          them, their absence is unlikely to cause problems.
 #//
 #// STEAMWM_GROUP_WINDOWS    Group all steam windows.
 #//                          This helps WMs with their focus stealing preventions,
@@ -61,7 +65,7 @@
 
 [ -z $STEAMWM_FORCE_BORDERS   ] && export STEAMWM_FORCE_BORDERS=1
 [ -z $STEAMWM_PREVENT_MOVE    ] && export STEAMWM_PREVENT_MOVE=1
-[ -z $STEAMWM_FIX_NET_WM_NAME ] && export STEAMWM_FIX_NET_WM_NAME=1
+[ -z $STEAMWM_FIX_NET_WM_NAME ] && export STEAMWM_FIX_NET_WM_NAME=0
 [ -z $STEAMWM_GROUP_WINDOWS   ] && export STEAMWM_GROUP_WINDOWS=1
 [ -z $STEAMWM_SET_WINDOW_TYPE ] && export STEAMWM_SET_WINDOW_TYPE=1
 [ -z $STEAMWM_SET_FIXED_SIZE  ] && export STEAMWM_SET_FIXED_SIZE=1
