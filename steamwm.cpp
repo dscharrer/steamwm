@@ -174,13 +174,13 @@ void steamwm_init(void) {
 
 #define STR_(x) # x
 #define STR(x)  STR_(x)
-#define BASE_NAME(name) base_ ## name
-#define TYPE_NAME(name) name ## _t
-#define INTERCEPT(return, name, ...) \
-	typedef return (*TYPE_NAME(name))(__VA_ARGS__); \
-	static void * const BASE_NAME(name) = dlsym(RTLD_NEXT, STR(name)); \
-	return name(__VA_ARGS__)
-#define BASE(name) ((TYPE_NAME(name))BASE_NAME(name))
+#define BASE_NAME(SymbolName) base_ ## SymbolName
+#define TYPE_NAME(SymbolName) SymbolName ## _t
+#define INTERCEPT(ReturnType, SymbolName, ...) \
+	typedef ReturnType (*TYPE_NAME(SymbolName))(__VA_ARGS__); \
+	static void * const BASE_NAME(SymbolName) = dlsym(RTLD_NEXT, STR(SymbolName)); \
+	ReturnType SymbolName(__VA_ARGS__)
+#define BASE(SymbolName) ((TYPE_NAME(SymbolName))BASE_NAME(SymbolName))
 
 static bool is_unmanaged_window(Display * dpy, Window w);
 static void set_is_unmanaged_window(Display * dpy, Window w, bool is_unmanaged);
