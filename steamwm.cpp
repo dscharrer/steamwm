@@ -284,7 +284,7 @@ INTERCEPT(int, XResizeWindow,
 	unsigned int height
 ) {
 	
-	if(set_fixed_size) {
+	if(set_fixed_size || manage_errors) {
 		// Set fixed size hints for windows with static layouts.
 		set_window_desired_size(dpy, w, width, height, false);
 	}
@@ -301,7 +301,7 @@ INTERCEPT(int, XMoveResizeWindow,
 	unsigned int height
 ) {
 	
-	if(set_fixed_size) {
+	if(set_fixed_size || manage_errors) {
 		// Set fixed size hints for windows with static layouts.
 		set_window_desired_size(dpy, w, width, height, false);
 	}
@@ -359,6 +359,32 @@ INTERCEPT(int, XMapWindow,
 	}
 	
 	return BASE(XMapWindow)(dpy, w);
+}
+
+INTERCEPT(void, XSetWMNormalHints,
+	Display *    dpy,
+	Window       w,
+	XSizeHints * hints
+) {
+	XSizeHints old_hints;
+	long supplied;
+	// Prevent steam from overriding the max size hints
+	if((set_fixed_size || manage_errors)
+	   && XGetWMNormalHints(dpy, w, &old_hints, &supplied)) {
+		if(!(hints->flags & PBaseSize) && (old_hints.flags & PBaseSize)) {
+			hints->flags |= PBaseSize;
+			hints->base_width  = old_hints.base_width;
+			hints->base_height = old_hints.base_height;
+		}
+		if((old_hints.flags & PMinSize) && (old_hints.flags & PMaxSize)
+		   && old_hints.min_width == old_hints.max_width
+		   && old_hints.min_height == old_hints.max_height) {
+			hints->flags |= PMinSize | PMaxSize;
+			hints->min_width  = hints->max_width  = old_hints.max_width;
+			hints->min_height = hints->max_height = old_hints.max_height;
+		}
+	}
+	BASE(XSetWMNormalHints)(dpy, w, hints);
 }
 
 
@@ -431,12 +457,13 @@ static void set_window_desired_size(Display * dpy, Window w, int width, int heig
 		}
 		width = cwidth, height = cheight;
 	}
-	if(set_fixed || (xsh.flags & (PMinSize | PMaxSize))) {
+	if(set_fixed || ((xsh.flags & PMinSize) && (xsh.flags & PMaxSize)
+	   && xsh.min_width == xsh.max_width && xsh.min_height == xsh.max_height)) {
 		xsh.flags |= PMinSize | PMaxSize;
-		xsh.min_width = xsh.max_width = width;
+		xsh.min_width  = xsh.max_width  = width;
 		xsh.min_height = xsh.max_height = height;
 	}
-	XSetWMNormalHints(dpy, w, &xsh);
+	BASE(XSetWMNormalHints)(dpy, w, &xsh);
 }
 
 static void set_window_property(Display * dpy, Window w, Atom property, Atom type,
