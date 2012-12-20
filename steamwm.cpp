@@ -118,6 +118,7 @@ static const char * fixed_size_windows[] = {
 	"Settings",
 	"About Steam",
 	"Backup and Restore Programs",
+	"Steam - Error",
 };
 static const char * fixed_size_suffixes[] = {
 	" - Properties",
