@@ -373,10 +373,10 @@ INTERCEPT(void, XSetWMNormalHints,
 	// Prevent steam from overriding the max size hints
 	if((set_fixed_size || manage_errors)
 	   && XGetWMNormalHints(dpy, w, &old_hints, &supplied)) {
-		if(!(hints->flags & PBaseSize) && (old_hints.flags & PBaseSize)) {
-			hints->flags |= PBaseSize;
-			hints->base_width  = old_hints.base_width;
-			hints->base_height = old_hints.base_height;
+		if(!(hints->flags & PSize) && (old_hints.flags & PSize)) {
+			hints->flags |= PSize;
+			hints->width  = old_hints.width;
+			hints->height = old_hints.height;
 		}
 		if((old_hints.flags & PMinSize) && (old_hints.flags & PMaxSize)
 		   && old_hints.min_width == old_hints.max_width
@@ -445,11 +445,14 @@ static void set_window_desired_size(Display * dpy, Window w, int width, int heig
 	}
 	if(width > 0 && height > 0) {
 		// Store the desired size.
-		xsh.flags |= PBaseSize;
-		xsh.base_width = width, xsh.base_height = height;
-	} else if(xsh.flags & PBaseSize) {
+		// PBaseSize (base_width and base_height) sounds more appropriate
+		// (and is not obsolete), but some window managers won't let the window
+		// get smaller than the base size.
+		xsh.flags |= PSize;
+		xsh.width = width, xsh.height = height;
+	} else if(xsh.flags & PSize) {
 		// Retrieve the desired size.
-		width = xsh.base_width, height = xsh.base_height;
+		width = xsh.width, height = xsh.height;
 	} else {
 		Window root;
 		int x, y;
