@@ -75,21 +75,39 @@
 
 
 self="$(readlink -f "$(which "$0")")"
-out="$(dirname "$self")/$(basename "$self" .cpp).so"
+name="$(basename "$self" .cpp)"
+out="$(dirname "$self")/$name"
+soname="$name.so"
 
+#// On amd64 platforms, compile a dummy 64-bit steamwm.so,
+#// so that native 64-bit tools invoked by Steam and its
+#// launch script won't spam (harmless) ld.so errors.
+if [ -f '/lib64/ld-linux-x86-64.so.2' ] ; then
+	dout="$out/64"
+	mkdir -p "$dout"
+	if ! [ -f "$dout/$soname" ] ; then
+		echo -e "\n" | gcc -shared -fPIC -m64 -x c - -o "$dout/$soname" &> /dev/null
+		strip "$dout/$soname" &> /dev/null
+		#// ignore all errors - this may at worst cause warnings later
+	fi
+	export LD_LIBRARY_PATH="$dout:$LD_LIBRARY_PATH"
+fi
+
+mkdir -p "$out"
 
 #// Compile the LD_PRELOAD library
-if [ "$self" -nt "$out" ] ; then
-	echo "Compiling $(basename "$out")..."
-	g++ -shared -fPIC -m32 "$self" -o "$out" \
+if [ "$self" -nt "$out/$soname" ] ; then
+	echo "Compiling $soname..."
+	g++ -shared -fPIC -m32 -x c++ "$self" -o "$out/$soname" \
 	    -lX11 -static-libgcc -static-libstdc++ \
-	    -O3 -Wall -Wextra -x c++ \
+	    -O3 -Wall -Wextra \
 		|| exit 1
 fi
 
 
 #// Run the executable
-export LD_PRELOAD="$out:$LD_PRELOAD"
+export LD_PRELOAD="$soname:$LD_PRELOAD"
+export LD_LIBRARY_PATH="$out:$LD_LIBRARY_PATH"
 [ -z "$1" ] || exec "$@"
 
 
