@@ -5,6 +5,8 @@
 
 These files are mirrored on both [GitHub](https://github.com/dscharrer/steamwm) and [Gist](https://gist.github.com/06d6b6a5370c4f6979f3) - use whichever you prefer.
 
+Feature request for these changes to be implemented in Steam: [issue #1040](https://github.com/ValveSoftware/steam-for-linux/issues/1040)
+
 ## steamwm.cpp
 
 The window management fixes:
