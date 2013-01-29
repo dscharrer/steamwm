@@ -1,0 +1,141 @@
+#!/bin/sh
+
+# Steam skin without any window decorations.
+# Same as the default style, but with the window borders and controls removed.
+# To in stall it just run ./noframe.patch
+
+self="$(readlink -f "$(which "$0")")"
+name="$(basename "$self" .patch)"
+skin="skins/$name"
+
+cd ~/.steam/root/
+
+if [ -e "$skin" ] ; then
+	echo "Skin '$name' already exists!"
+	echo "Remove \"$(readlink -f "$skin")\" first."
+	exit 1
+fi
+
+mkdir -p "$skin/resource/styles"
+cp resource/styles/steam.styles "$skin/resource/styles/"
+cp resource/steamscheme.res "$skin/resource/"
+dos2unix -f "$skin/resource/styles/steam.styles"
+dos2unix -f "$skin/resource/steamscheme.res"
+patch -ld "$skin" -p0 < "$self"
+
+exit
+
+diff -ru resource/steamscheme.res skins/noframe/resource/steamscheme.res
+--- resource/steamscheme.res	2011-08-02 14:14:04.000000000 +0200
++++ skins/noframe/resource/steamscheme.res	2012-11-17 06:01:22.762356738 +0100
+@@ -94,56 +94,27 @@
+ 			
+ 			frame_title
+ 			{
+-				xpos	0
+-				ypos	1
+-				wide	max 
+-				tall	28
+-				AutoResize	1
++				visible	0	// hidden
+ 			}
+ 			
+ 			frame_captiongrip
+ 			{
+-				xpos	4
+-				ypos	4
+-				wide	r20
+-				tall	60
+-				AutoResize	1
++				visible	0	// hidden
+ 			}
+ 			
+ 			frame_minimize
+ 			{
+-				xpos	r45
+-				xpos	22 [$OSX]
+-				ypos	7
+-				ypos	3 [$OSX]
+-				wide	20
+-				tall	20
+-				PinCorner	1
+-				PinCorner	0 [$OSX]
++				visible	0	// hidden
+ 			}
+ 			
+ 			frame_maximize
+ 			{
+-				xpos	r59
+-				xpos	43 [$OSX]
+-				ypos	7
+-				ypos	3 [$OSX]
+-				wide	20 
+-				tall	20
+-				visible 0 [!$OSX]
+-				PinCorner	1
+-				PinCorner	0 [$OSX]
+-			}			
++				visible	0	// hidden
++			}
++			
+ 			frame_close
+ 			{
+-				xpos	r29
+-				xpos	1 [$OSX]
+-				ypos	7
+-				ypos	3 [$OSX]
+-				wide	20
+-				tall	20
+-				PinCorner	1
+-				PinCorner	0 [$OSX]
++				visible	0	// hidden
+ 			}
+ 
+ 			frame_brGrip
+@@ -161,7 +132,7 @@
+ 			sheet
+ 			{
+ 				xpos	9
+-				ypos	26
++				ypos	9
+ 				wide	r9
+ 				tall	r48
+ 			}
+@@ -198,7 +169,7 @@
+ 			subpanel
+ 			{
+ 				xpos	10
+-				ypos	28
++				ypos	10
+ 				wide	r10
+ 				tall	r48
+ 				AutoResize	3
+diff -ru resource/styles/steam.styles skins/noframe/resource/styles/steam.styles
+--- resource/styles/steam.styles	2012-09-10 10:59:38.000000000 +0200
++++ skins/noframe/resource/styles/steam.styles	2012-11-17 09:00:24.005954899 +0100
+@@ -1221,25 +1221,11 @@
+     Frame
+     {
+     bgcolor="DialogBG"
+-      render
+-      {
+-        0="gradient_horizontal( x0, y1 - 1, x1 + 1, y1, ClientBG, Highlight5 )"     
+-        1="gradient( x1 - 1, y0, x1, y1, ClientBG, Highlight5 )" 
+-        2="fill( x0, y0, x1, y0 + 1, ClientBG )"
+-        3="fill( x0, y0, x0 + 1, y1, ClientBG )"
+-      }
+     } 
+     
+     Frame:FrameFocus
+     {
+     bgcolor="DialogBG"
+-      render
+-      {
+-        0="gradient_horizontal( x0, y1 - 1, x1 + 1, y1, ClientBG, Highlight5 )"     
+-        1="gradient( x1 - 1, y0, x1, y1, ClientBG, Highlight5 )" 
+-        2="fill( x0, y0, x1, y0 + 1, ClientBG )"
+-        3="fill( x0, y0, x0 + 1, y1, ClientBG )"
+-      }
+     } 
+     
+     
