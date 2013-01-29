@@ -30,7 +30,7 @@ Obsolete fixes (now disabled by default):
 
 Fixes can be individually enabled or disabled - for details see the comments in the source file.
 
-This file compiles to a library that can be `LD_PRELOAD`ed into the Steam process. For your convenience it is also it's own build and wrapper script.
+This file compiles to a library that can be `LD_PRELOAD`ed into the Steam process. For your convenience it is also its own build and wrapper script.
 
 Requires: `g++` with support for x86 targets, `Xlib` + headers
 
