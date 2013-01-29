@@ -3,6 +3,7 @@
 
 DISCLAIMER: Use at your own risk! This is in no way endorsed by VALVE.
 
+These files are mirrored on both [GitHub](https://github.com/dscharrer/steamwm) and [Gist](https://gist.github.com/06d6b6a5370c4f6979f3) - use whichever you prefer.
 
 ## steamwm.cpp
 
