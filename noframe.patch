@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Steam skin without any window decorations.
-# Same as the default style, but with the window borders and controls removed.
+# Same as the default skin, but with the window borders and controls removed.
 # To in stall it just run ./noframe.patch
 
 self="$(readlink -f "$(which "$0")")"
