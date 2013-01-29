@@ -79,6 +79,7 @@ name="$(basename "$self" .cpp)"
 out="$(dirname "$self")/$name"
 soname="$name.so"
 
+
 #// On amd64 platforms, compile a dummy 64-bit steamwm.so,
 #// so that native 64-bit tools invoked by Steam and its
 #// launch script won't spam (harmless) ld.so errors.
@@ -93,9 +94,9 @@ if [ -f '/lib64/ld-linux-x86-64.so.2' ] ; then
 	export LD_LIBRARY_PATH="$dout:$LD_LIBRARY_PATH"
 fi
 
-mkdir -p "$out"
 
 #// Compile the LD_PRELOAD library
+mkdir -p "$out"
 if [ "$self" -nt "$out/$soname" ] ; then
 	echo "Compiling $soname..."
 	g++ -shared -fPIC -m32 -x c++ "$self" -o "$out/$soname" \
