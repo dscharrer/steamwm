@@ -8,7 +8,7 @@ DISCLAIMER: Use at your own risk! This is in no way endorsed by VALVE.
 
 The window management fixes, including forcing window borders for Steam. Fixes can be individually enabled or disabled - for details see the comments in the source file.
 
-This file compiles to a library that can be `LD_PRELOAD`ed into the steam process. For your convenience it is also it's own build and wrapper script.
+This file compiles to a library that can be `LD_PRELOAD`ed into the Steam process. For your convenience it is also it's own build and wrapper script.
 
 Requires: `g++` with support for x86 targets, `Xlib` + headers
 
@@ -27,4 +27,4 @@ To install it use:
     $ chmod +x noframe.patch
     $ ./noframe.patch
 
-and then select the **`noframe`** skin in the Steam settings.
+and then select the `noframe` skin in the Steam settings.
