@@ -8,13 +8,6 @@
 #//
 #// STEAMWM_PREVENT_MOVE     Let the WM position non-menu/tooltip windows.
 #//
-#// STEAMWM_FIX_NET_WM_NAME  Set _NET_WM_NAME to the WM_NAME value to get better window
-#//                          titles (and add " - Steam" suffix if needed).
-#//                          Update: now disabled by default
-#//                          Steam now doesn't set WM_ICON_NAME, _NET_WM_NAME or
-#//                          _NET_WM_ICON_NAME anymore - while it would be better to set
-#//                          them, their absence is unlikely to cause problems.
-#//
 #// STEAMWM_GROUP_WINDOWS    Group all steam windows.
 #//                          This helps WMs with their focus stealing preventions,
 #//                          and also prevents all Steam windows from being dimmed
@@ -28,9 +21,18 @@
 #//                                "Steam" or "Friends" as a dialog window.
 #//                                The startup window is also marked as a dialog.
 #//
-#// STEAMWM_SET_FIXED_SIZE   Set fixed size hints for windows with a fixed layout.
-#//
 #// STEAMWM_MANAGE_ERRORS    Steam sets error dialogs as unmanaged windows - fix that.
+#//
+#//
+#// Obsolete fixes (now disabled by default):
+#//
+#// STEAMWM_FIX_NET_WM_NAME  Set _NET_WM_NAME to the WM_NAME value to get better window
+#//                          titles (and add " - Steam" suffix if needed).
+#//                          Steam now doesn't set WM_ICON_NAME, _NET_WM_NAME or
+#//                          _NET_WM_ICON_NAME anymore - while it would be better to set
+#//                          them, their absence is unlikely to cause problems.
+#//
+#// STEAMWM_SET_FIXED_SIZE   Set fixed size hints for windows with a fixed layout.
 #//
 #//
 #// Requires: g++ with support for x86 targets, Xlib + headers
@@ -68,7 +70,7 @@
 [ -z $STEAMWM_FIX_NET_WM_NAME ] && export STEAMWM_FIX_NET_WM_NAME=0
 [ -z $STEAMWM_GROUP_WINDOWS   ] && export STEAMWM_GROUP_WINDOWS=1
 [ -z $STEAMWM_SET_WINDOW_TYPE ] && export STEAMWM_SET_WINDOW_TYPE=1
-[ -z $STEAMWM_SET_FIXED_SIZE  ] && export STEAMWM_SET_FIXED_SIZE=1
+[ -z $STEAMWM_SET_FIXED_SIZE  ] && export STEAMWM_SET_FIXED_SIZE=0
 [ -z $STEAMWM_MANAGE_ERRORS   ] && export STEAMWM_MANAGE_ERRORS=1
 
 
