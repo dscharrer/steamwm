@@ -25,7 +25,7 @@ The window management fixes:
 
 Obsolete fixes (now disabled by default):
 
-* Set _NET_WM_NAME to the WM_NAME value to get better window titles.
+* Set `_NET_WM_NAME` to the `WM_NAME` value to get better window titles.
 * Set fixed size hints for windows with a fixed layout.
 
 Fixes can be individually enabled or disabled - for details see the comments in the source file.
