@@ -283,9 +283,13 @@ INTERCEPT(int, XChangeProperty,
 	}
 	
 	if(manage_errors && property == XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False)) {
-		if(!is_unmanaged_window(dpy, w)) {
-			// Ignore the window type Steam sets on error dialogs.
-			return 1;
+		if(!is_unmanaged_window(dpy, w) && type == XA_ATOM && format == 32 && n > 0) {
+			Atom menu = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_MENU", False);
+			Atom type = reinterpret_cast<const long * /* sic */>(data)[0];
+			if(type == menu) {
+				// Ignore the window type Steam sets on error dialogs.
+				return 1;
+			}
 		}
 	}
 	
