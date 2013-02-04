@@ -222,6 +222,24 @@ static void set_window_modal(Display * dpy, Window w);
 
 static Window first_window = None, second_window = None;
 
+static void name_changed(Display * dpy, Window w, const unsigned char * data, int n);
+
+INTERCEPT(void, XSetWMName,
+	Display *       dpy,
+	Window          w,
+	XTextProperty * prop
+) {
+	
+	if(prop->format == 8) {
+		// The libX11 pulled in with STEAM_RUNTIME=1 has XSetWMName (or XSetTextProperty?)
+		// liked/optimized to use internal functions and not the global XChangeProperty,
+		// so our override below won't work -> also intercept XSetWMName().
+		name_changed(dpy, w, prop->value, prop->nitems);
+	}
+	
+	return BASE(XSetWMName)(dpy, w, prop);
+}
+
 INTERCEPT(int, XChangeProperty,
 	Display *             dpy,
 	Window                w,
@@ -234,52 +252,7 @@ INTERCEPT(int, XChangeProperty,
 ) {
 	
 	if(property == XA_WM_NAME && format == 8) {
-		
-		char * value = (char *)data;
-		
-		if(fix_net_wm_name) {
-			// Use the XA_WM_NAME as both XA_WM_NAME and _NET_WM_NAME.
-			// Steam sets _NET_WM_NAME to just "Steam" for all windows.
-			const unsigned char * name = data;
-			unsigned char * buffer = NULL;
-			int nn = n;
-			if(n > 0 && strstr((char *)data, "Steam") == 0) {
-				// Make sure "Steam" is in all window titles.
-				char suffix[] = " - Steam";
-				nn = n + sizeof(suffix) - 1;
-				name = buffer = (unsigned char *)malloc(nn + 1);
-				memcpy(buffer, data, n);
-				memcpy(buffer + n, suffix, sizeof(suffix));
-			}
-			Atom net_wm_name = XInternAtom(dpy, "_NET_WM_NAME", False);
-			Atom utf8_string = XInternAtom(dpy, "UTF8_STRING", False);
-			BASE(XChangeProperty)(dpy, w, net_wm_name, utf8_string, format, mode, name, nn);
-			if(buffer) {
-				free(buffer);
-			}
-		}
-		
-		if(manage_errors && is_unmanaged_window(dpy, w) && strcmp(value, "Steam") != 0) {
-			// Error dialogs should be managed by the window manager.
-			set_is_unmanaged_window(dpy, w, false);
-			set_window_modal(dpy, w);
-			set_window_desired_size(dpy, w, -1, -1, true);
-		}
-		
-		if(set_window_type && !is_unmanaged_window(dpy, w)
-		   && w != first_window && w != second_window) {
-			// Set the window type for non-menu windows.
-			// This should probably be done *before* mapping the windows,
-			// but the we don't have a title yet.
-			// Try to guess the window type from the title.
-			set_window_is_dialog(dpy, w, !is_main_window_name(value));
-		}
-		
-		if(set_fixed_size && is_fixed_size_window_name(value)) {
-			// Set fixed size hints for windows with static layouts.
-			set_window_desired_size(dpy, w, -1, -1, true);
-		}
-		
+		name_changed(dpy, w, data, n);
 	}
 	
 	if(manage_errors && property == XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False)) {
@@ -299,6 +272,55 @@ INTERCEPT(int, XChangeProperty,
 	}
 	
 	return BASE(XChangeProperty)(dpy, w, property, type, format, mode, data, n);
+}
+
+static void name_changed(Display * dpy, Window w, const unsigned char * data, int n) {
+	
+	char * value = (char *)data;
+	
+	if(fix_net_wm_name) {
+		// Use the XA_WM_NAME as both XA_WM_NAME and _NET_WM_NAME.
+		// Steam sets _NET_WM_NAME to just "Steam" for all windows.
+		const unsigned char * name = data;
+		unsigned char * buffer = NULL;
+		int nn = n;
+		if(n > 0 && strstr((char *)data, "Steam") == 0) {
+			// Make sure "Steam" is in all window titles.
+			char suffix[] = " - Steam";
+			nn = n + sizeof(suffix) - 1;
+			name = buffer = (unsigned char *)malloc(nn + 1);
+			memcpy(buffer, data, n);
+			memcpy(buffer + n, suffix, sizeof(suffix));
+		}
+		Atom net_wm_name = XInternAtom(dpy, "_NET_WM_NAME", False);
+		Atom utf8_string = XInternAtom(dpy, "UTF8_STRING", False);
+		BASE(XChangeProperty)(dpy, w, net_wm_name, utf8_string, 8, PropModeReplace, name, nn);
+		if(buffer) {
+			free(buffer);
+		}
+	}
+	
+	if(manage_errors && is_unmanaged_window(dpy, w) && strcmp(value, "Untitled") == 0) {
+		// Error dialogs should be managed by the window manager.
+		set_is_unmanaged_window(dpy, w, false);
+		set_window_modal(dpy, w);
+		set_window_desired_size(dpy, w, -1, -1, true);
+	}
+	
+	if(set_window_type && !is_unmanaged_window(dpy, w)
+		&& w != first_window && w != second_window) {
+		// Set the window type for non-menu windows.
+		// This should probably be done *before* mapping the windows,
+		// but then we don't have a title yet.
+		// Try to guess the window type from the title.
+		set_window_is_dialog(dpy, w, !is_main_window_name(value));
+	}
+	
+	if(set_fixed_size && is_fixed_size_window_name(value)) {
+		// Set fixed size hints for windows with static layouts.
+		set_window_desired_size(dpy, w, -1, -1, true);
+	}
+	
 }
 
 
