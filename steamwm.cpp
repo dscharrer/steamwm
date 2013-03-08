@@ -135,6 +135,11 @@ static const char * main_windows[] = {
 	"Steam",
 	"Friends",
 };
+// List of window titles for windows that should be dialogs even if unmanaged
+static const char * dialog_windows[] = {
+	"Untitled",
+	"Steam - Go Online",
+};
 static const char * fixed_size_windows[] = {
 	"Settings",
 	"About Steam",
@@ -209,6 +214,7 @@ static bool is_unmanaged_window(Display * dpy, Window w);
 static void set_is_unmanaged_window(Display * dpy, Window w, bool is_unmanaged);
 static bool is_fixed_size_window_name(const char * name);
 static bool is_main_window_name(const char * name);
+static bool is_dialog_window_name(const char * name);
 static void set_window_desired_size(Display * dpy, Window w, int width, int height,
                                     bool set_fixed);
 static void set_window_property(Display * dpy, Window w, Atom property, Atom type,
@@ -300,7 +306,7 @@ static void name_changed(Display * dpy, Window w, const unsigned char * data, in
 		}
 	}
 	
-	if(manage_errors && is_unmanaged_window(dpy, w) && strcmp(value, "Untitled") == 0) {
+	if(manage_errors && is_unmanaged_window(dpy, w) && is_dialog_window_name(value)) {
 		// Error dialogs should be managed by the window manager.
 		set_is_unmanaged_window(dpy, w, false);
 		set_window_modal(dpy, w);
@@ -308,7 +314,7 @@ static void name_changed(Display * dpy, Window w, const unsigned char * data, in
 	}
 	
 	if(set_window_type && !is_unmanaged_window(dpy, w)
-		&& w != first_window && w != second_window) {
+	   && w != first_window && w != second_window) {
 		// Set the window type for non-menu windows.
 		// This should probably be done *before* mapping the windows,
 		// but then we don't have a title yet.
@@ -453,10 +459,11 @@ static void set_is_unmanaged_window(Display * dpy, Window w, bool is_unmanaged) 
 	XChangeWindowAttributes(dpy, w, CWOverrideRedirect, &xswa);
 }
 
-static bool is_main_window_name(const char * name) {
+template <size_t N>
+static bool is_in_array(const char * (&array)[N], const char * needle) {
 	
-	for(unsigned i = 0; i < sizeof(main_windows)/sizeof(*main_windows); i++) {
-		if(strcmp(name, main_windows[i]) == 0) {
+	for(unsigned i = 0; i < N; i++) {
+		if(strcmp(needle, array[i]) == 0) {
 			return true;
 		}
 	}
@@ -464,12 +471,18 @@ static bool is_main_window_name(const char * name) {
 	return false;
 }
 
+static bool is_main_window_name(const char * name) {
+	return is_in_array(main_windows, name);
+}
+
+static bool is_dialog_window_name(const char * name) {
+	return is_in_array(dialog_windows, name);
+}
+
 static bool is_fixed_size_window_name(const char * name) {
 	
-	for(unsigned i = 0; i < sizeof(fixed_size_windows)/sizeof(*fixed_size_windows); i++) {
-		if(strcmp(name, fixed_size_windows[i]) == 0) {
-			return true;
-		}
+	if(is_in_array(fixed_size_windows, name)) {
+		return true;
 	}
 	
 	int len = strlen(name);
