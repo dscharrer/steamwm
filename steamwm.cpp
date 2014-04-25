@@ -101,7 +101,7 @@ if [ "$self" -nt "$out/$soname" ] ; then
 	echo "Compiling $soname..."
 	g++ -shared -fPIC -m32 -x c++ "$self" -o "$out/$soname" \
 	    -lX11 -static-libgcc -static-libstdc++ \
-	    -O3 -Wall -Wextra \
+	    -O3 -Wall -Wextra -DSONAME="$soname" \
 		|| exit 1
 fi
 
@@ -128,6 +128,9 @@ exit
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
+
+#define STR_(x) # x
+#define STR(x)  STR_(x)
 
 
 // List of window titles for windows that should not be marked as dialogs
@@ -178,6 +181,22 @@ void steamwm_init(void) {
 		return;
 	}
 	
+	// Prevent steamwm.so from being attached to processes started by steam
+	const char * envname = "LD_PRELOAD";
+	const char * oldenv = getenv(envname);
+	if(oldenv) {
+		char * env = strdup(oldenv);
+		char * pos = strstr(env, STR(SONAME));
+		if(pos) {
+			size_t len1 = strlen(STR(SONAME));
+			size_t len2 = strlen(pos + len1);
+			memmove(pos, pos + len1, len2);
+			*(pos + len2) = '\0';
+			setenv(envname, env, 1);
+		}
+		free(env);
+	}
+	
 	force_borders   = get_setting("STEAMWM_FORCE_BORDERS");
 	prevent_move    = get_setting("STEAMWM_PREVENT_MOVE");
 	fix_net_wm_name = get_setting("STEAMWM_FIX_NET_WM_NAME");
@@ -200,8 +219,6 @@ void steamwm_init(void) {
 
 /* helper functions */
 
-#define STR_(x) # x
-#define STR(x)  STR_(x)
 #define BASE_NAME(SymbolName) base_ ## SymbolName
 #define TYPE_NAME(SymbolName) SymbolName ## _t
 #define INTERCEPT(ReturnType, SymbolName, ...) \
