@@ -111,16 +111,16 @@ diff -ru resource/steamscheme.res skins/noframe/resource/steamscheme.res
  				tall	r48
  				AutoResize	3
 diff -ru resource/styles/steam.styles skins/noframe/resource/styles/steam.styles
---- resource/styles/steam.styles	2012-09-10 10:59:38.000000000 +0200
-+++ skins/noframe/resource/styles/steam.styles	2012-11-17 09:00:24.005954899 +0100
-@@ -1221,25 +1221,11 @@
+--- resource/styles/steam.styles	2014-08-08 03:52:08.370172002 +0200
++++ skins/noframe/resource/styles/steam.styles	2014-08-08 03:54:35.733182157 +0200
+@@ -795,25 +795,11 @@
      Frame
      {
      bgcolor="DialogBG"
 -      render
 -      {
--        0="gradient_horizontal( x0, y1 - 1, x1 + 1, y1, ClientBG, Highlight5 )"     
--        1="gradient( x1 - 1, y0, x1, y1, ClientBG, Highlight5 )" 
+-        0="gradient_horizontal( x0, y1 - 1, x1 + 1, y1, ClientBG, focus )"     
+-        1="gradient( x1 - 1, y0, x1, y1, ClientBG, focus )" 
 -        2="fill( x0, y0, x1, y0 + 1, ClientBG )"
 -        3="fill( x0, y0, x0 + 1, y1, ClientBG )"
 -      }
@@ -131,11 +131,11 @@ diff -ru resource/styles/steam.styles skins/noframe/resource/styles/steam.styles
      bgcolor="DialogBG"
 -      render
 -      {
--        0="gradient_horizontal( x0, y1 - 1, x1 + 1, y1, ClientBG, Highlight5 )"     
--        1="gradient( x1 - 1, y0, x1, y1, ClientBG, Highlight5 )" 
+-        0="gradient_horizontal( x0, y1 - 1, x1 + 1, y1, ClientBG, focus2 )"     
+-        1="gradient( x1 - 1, y0, x1, y1, ClientBG, focus2 )" 
 -        2="fill( x0, y0, x1, y0 + 1, ClientBG )"
 -        3="fill( x0, y0, x0 + 1, y1, ClientBG )"
 -      }
      } 
      
-     
+     FrameBRGripPanel
